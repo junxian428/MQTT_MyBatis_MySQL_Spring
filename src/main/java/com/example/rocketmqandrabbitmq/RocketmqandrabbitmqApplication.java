@@ -1,5 +1,6 @@
 package com.example.rocketmqandrabbitmq;
 
+import org.eclipse.paho.client.mqttv3.IMqttClient;
 import org.eclipse.paho.client.mqttv3.IMqttMessageListener;
 import org.eclipse.paho.client.mqttv3.MqttClient;
 import org.eclipse.paho.client.mqttv3.MqttConnectOptions;
@@ -20,7 +21,7 @@ import com.example.rocketmqandrabbitmq.Mapper.DeviceMapper;
 @SpringBootApplication
 public class RocketmqandrabbitmqApplication {
 
-    private static final String BROKER_URL = "tcp://:1883";
+    private static final String BROKER_URL = "tcp://";
 
 
     public static void main(String[] args) {
@@ -40,9 +41,40 @@ public class RocketmqandrabbitmqApplication {
 
 }
 
+class MqttPublisher {
+
+    private String brokerUrl="tcp://";
+    private String clientId = "1";
+    private IMqttClient mqttClient;
+
+    public MqttPublisher(){
+        
+    }
+
+    public MqttPublisher(String brokerUrl, String clientId) {
+        this.brokerUrl = brokerUrl;
+        this.clientId = clientId;
+    }
+
+    public void connect() throws MqttException {
+        mqttClient = new MqttClient(brokerUrl, clientId);
+        MqttConnectOptions options = new MqttConnectOptions();
+        options.setCleanSession(true);
+        mqttClient.connect(options);
+    }
+
+    public void publish(String topic, String payload) throws MqttException {
+        MqttMessage message = new MqttMessage(payload.getBytes());
+        mqttClient.publish(topic, message);
+    }
+
+    public void disconnect() throws MqttException {
+        mqttClient.disconnect();
+    }
+}
 
 class MQTTSubscriber {
-    private static final String BROKER_URL = "tcp://:1883";
+    private static final String BROKER_URL = "tcp://";
     private String topic;
     private DeviceMapper deviceMapper;
 
@@ -69,6 +101,7 @@ class MQTTSubscriber {
                 if(topic.equals("Topic1")){
                     System.out.println("SQL Topic 1 will be runn");
                 } 
+                
 
                 if(topic.equals("Hello")){
                     System.out.println("Hello");
@@ -86,6 +119,10 @@ class MQTTSubscriber {
                                 
                                 // Commit the transaction (if needed)
                                 session.commit();
+                                MqttPublisher mqttPublisher = new MqttPublisher();
+                                mqttPublisher.connect();
+                                mqttPublisher.publish("GetHello", "Replies : " + message.toString());
+                                mqttPublisher.disconnect();
                       
                     }catch(Exception e){
                         System.out.println(e);
